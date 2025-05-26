@@ -29,6 +29,7 @@ constraint_param_schema = core_schema.union_schema(
     ]
 )
 
+
 # Constraint schema
 def validate_constraint(value: dict) -> Constraint:
     return Constraint(
@@ -38,6 +39,7 @@ def validate_constraint(value: dict) -> Constraint:
         param=value["param"],
     )
 
+
 def serialize_constraint(constraint: Constraint) -> dict:
     return {
         "tags": constraint.tags,
@@ -46,12 +48,11 @@ def serialize_constraint(constraint: Constraint) -> dict:
         "param": constraint.param,
     }
 
+
 constraint_model_schema = core_schema.typed_dict_schema(
     {
         "tags": core_schema.model_field(
-            core_schema.tuple_schema(
-                [core_schema.str_schema()], variadic_item_index=0
-            )
+            core_schema.tuple_schema([core_schema.str_schema()], variadic_item_index=0)
         ),
         "args": core_schema.model_field(
             core_schema.tuple_schema([shape_core_schema], variadic_item_index=0)
@@ -87,6 +88,7 @@ constraint_core_schema = core_schema.json_or_python_schema(
     ),
 )
 
+
 # Sketch schema
 def validate_sketch(value: dict) -> Sketch:
     # Create a new Sketch instance without calling __init__
@@ -102,6 +104,7 @@ def validate_sketch(value: dict) -> Sketch:
 
     return sketch
 
+
 def serialize_sketch(sketch: Sketch) -> dict:
     return {
         "locs": sketch.locs,
@@ -111,6 +114,7 @@ def serialize_sketch(sketch: Sketch) -> dict:
         "_constraints": sketch._constraints,
         "_tags": sketch._tags,
     }
+
 
 # Create schema for SketchVal (which is a tuple of (Edge, Location))
 sketchval_schema = core_schema.tuple_schema(
@@ -138,7 +142,11 @@ sketch_model_schema = core_schema.typed_dict_schema(
         "_constraints": core_schema.model_field(
             core_schema.list_schema(constraint_core_schema)
         ),
-        "_tags": core_schema.model_field(core_schema.dict_schema(core_schema.str_schema(), core_schema.list_schema(sketchval_schema))),
+        "_tags": core_schema.model_field(
+            core_schema.dict_schema(
+                core_schema.str_schema(), core_schema.list_schema(sketchval_schema)
+            )
+        ),
     }
 )
 

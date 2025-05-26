@@ -1,206 +1,114 @@
 from cadquery_pydantic import patch_cadquery
-from pydantic import TypeAdapter
 import cadquery as cq
 
+patch_cadquery()
 
-def test_vector_serialization():
-    patch_cadquery()
 
+def test_vector_serialization(check_serialization):
     # Create a test vector
     vector = cq.Vector(1, 2, 3)
 
-    # Serialize to JSON
-    json_data = TypeAdapter(cq.Vector).dump_json(vector)
+    def check_equality(v1: cq.Vector, v2: cq.Vector) -> bool:
+        assert abs(v1.x - v2.x) < 1e-10
+        assert abs(v1.y - v2.y) < 1e-10
+        assert abs(v1.z - v2.z) < 1e-10
+        return True
 
-    # Deserialize back to Vector
-    vector_again = TypeAdapter(cq.Vector).validate_json(json_data)
-
-    # Compare the vectors
-    assert abs(vector.x - vector_again.x) < 1e-10
-    assert abs(vector.y - vector_again.y) < 1e-10
-    assert abs(vector.z - vector_again.z) < 1e-10
+    check_serialization(vector, cq.Vector, check_equality)
 
 
-def test_matrix_serialization():
-    patch_cadquery()
-
+def test_matrix_serialization(check_serialization):
     # Create a test matrix (identity matrix)
     matrix = cq.Matrix()
 
-    # Serialize to JSON
-    json_data = TypeAdapter(cq.Matrix).dump_json(matrix)
+    def check_equality(m1: cq.Matrix, m2: cq.Matrix) -> bool:
+        # Compare the matrices using transposed_list
+        original_data = m1.transposed_list()
+        deserialized_data = m2.transposed_list()
 
-    # Deserialize back to Matrix
-    matrix_again = TypeAdapter(cq.Matrix).validate_json(json_data)
+        # Compare each element
+        assert len(original_data) == len(deserialized_data) == 16
+        for orig, deser in zip(original_data, deserialized_data):
+            assert abs(orig - deser) < 1e-10  # Use small epsilon for float comparison
+        return True
 
-    # Compare the matrices using transposed_list
-    original_data = matrix.transposed_list()
-    deserialized_data = matrix_again.transposed_list()
-
-    # Compare each element
-    assert len(original_data) == len(deserialized_data) == 16
-    for orig, deser in zip(original_data, deserialized_data):
-        assert abs(orig - deser) < 1e-10  # Use small epsilon for float comparison
+    check_serialization(matrix, cq.Matrix, check_equality)
 
 
-def test_plane_serialization():
-    patch_cadquery()
+def test_plane_serialization(check_serialization):
+    def check_equality(p1: cq.Plane, p2: cq.Plane) -> bool:
+        # Check origin
+        assert abs(p1.origin.x - p2.origin.x) < 1e-10
+        assert abs(p1.origin.y - p2.origin.y) < 1e-10
+        assert abs(p1.origin.z - p2.origin.z) < 1e-10
 
-    # Create a test plane (XY plane at origin)
+        # Check x-direction
+        assert abs(p1.xDir.x - p2.xDir.x) < 1e-10
+        assert abs(p1.xDir.y - p2.xDir.y) < 1e-10
+        assert abs(p1.xDir.z - p2.xDir.z) < 1e-10
+
+        # Check normal (z-direction)
+        assert abs(p1.zDir.x - p2.zDir.x) < 1e-10
+        assert abs(p1.zDir.y - p2.zDir.y) < 1e-10
+        assert abs(p1.zDir.z - p2.zDir.z) < 1e-10
+        return True
+
+    # Test with XY plane
     plane = cq.Plane.XY()
-
-    # Serialize to JSON
-    json_data = TypeAdapter(cq.Plane).dump_json(plane)
-
-    # Deserialize back to Plane
-    plane_again = TypeAdapter(cq.Plane).validate_json(json_data)
-
-    # Compare the planes
-    # Check origin
-    assert abs(plane.origin.x - plane_again.origin.x) < 1e-10
-    assert abs(plane.origin.y - plane_again.origin.y) < 1e-10
-    assert abs(plane.origin.z - plane_again.origin.z) < 1e-10
-
-    # Check x-direction
-    assert abs(plane.xDir.x - plane_again.xDir.x) < 1e-10
-    assert abs(plane.xDir.y - plane_again.xDir.y) < 1e-10
-    assert abs(plane.xDir.z - plane_again.xDir.z) < 1e-10
-
-    # Check normal (z-direction)
-    assert abs(plane.zDir.x - plane_again.zDir.x) < 1e-10
-    assert abs(plane.zDir.y - plane_again.zDir.y) < 1e-10
-    assert abs(plane.zDir.z - plane_again.zDir.z) < 1e-10
+    check_serialization(plane, cq.Plane, check_equality)
 
     # Test with a custom plane
-    custom_plane = cq.Plane(
-        origin=(1, 2, 3),
-        xDir=(1, 1, 0),
-        normal=(0, 0, 1)
-    )
-
-    # Serialize to JSON
-    json_data = TypeAdapter(cq.Plane).dump_json(custom_plane)
-
-    # Deserialize back to Plane
-    plane_again = TypeAdapter(cq.Plane).validate_json(json_data)
-
-    # Compare the planes
-    # Check origin
-    assert abs(custom_plane.origin.x - plane_again.origin.x) < 1e-10
-    assert abs(custom_plane.origin.y - plane_again.origin.y) < 1e-10
-    assert abs(custom_plane.origin.z - plane_again.origin.z) < 1e-10
-
-    # Check x-direction
-    assert abs(custom_plane.xDir.x - plane_again.xDir.x) < 1e-10
-    assert abs(custom_plane.xDir.y - plane_again.xDir.y) < 1e-10
-    assert abs(custom_plane.xDir.z - plane_again.xDir.z) < 1e-10
-
-    # Check normal (z-direction)
-    assert abs(custom_plane.zDir.x - plane_again.zDir.x) < 1e-10
-    assert abs(custom_plane.zDir.y - plane_again.zDir.y) < 1e-10
-    assert abs(custom_plane.zDir.z - plane_again.zDir.z) < 1e-10
+    custom_plane = cq.Plane(origin=(1, 2, 3), xDir=(1, 1, 0), normal=(0, 0, 1))
+    check_serialization(custom_plane, cq.Plane, check_equality)
 
 
-def test_boundbox_serialization():
-    patch_cadquery()
+def test_boundbox_serialization(check_serialization):
+    def check_equality(b1: cq.BoundBox, b2: cq.BoundBox) -> bool:
+        # Check min/max coordinates
+        assert abs(b1.xmin - b2.xmin) < 1e-10
+        assert abs(b1.xmax - b2.xmax) < 1e-10
+        assert abs(b1.ymin - b2.ymin) < 1e-10
+        assert abs(b1.ymax - b2.ymax) < 1e-10
+        assert abs(b1.zmin - b2.zmin) < 1e-10
+        assert abs(b1.zmax - b2.zmax) < 1e-10
 
-    # Create a test box and get its bounding box
+        # Check derived properties
+        assert abs(b1.xlen - b2.xlen) < 1e-10
+        assert abs(b1.ylen - b2.ylen) < 1e-10
+        assert abs(b1.zlen - b2.zlen) < 1e-10
+        assert abs(b1.DiagonalLength - b2.DiagonalLength) < 1e-10
+        return True
+
+    # Test with a simple box
     box = cq.Workplane("XY").box(1, 1, 1).val().BoundingBox()
+    check_serialization(box, cq.BoundBox, check_equality)
 
-    # Serialize to JSON
-    json_data = TypeAdapter(cq.BoundBox).dump_json(box)
-
-    # Deserialize back to BoundBox
-    box_again = TypeAdapter(cq.BoundBox).validate_json(json_data)
-
-    # Compare the bounding boxes
-    # Check min/max coordinates
-    assert abs(box.xmin - box_again.xmin) < 1e-10
-    assert abs(box.xmax - box_again.xmax) < 1e-10
-    assert abs(box.ymin - box_again.ymin) < 1e-10
-    assert abs(box.ymax - box_again.ymax) < 1e-10
-    assert abs(box.zmin - box_again.zmin) < 1e-10
-    assert abs(box.zmax - box_again.zmax) < 1e-10
-
-    # Check derived properties
-    assert abs(box.xlen - box_again.xlen) < 1e-10
-    assert abs(box.ylen - box_again.ylen) < 1e-10
-    assert abs(box.zlen - box_again.zlen) < 1e-10
-    assert abs(box.DiagonalLength - box_again.DiagonalLength) < 1e-10
-
-    # Test with a custom bounding box
+    # Test with a custom box
     custom_box = cq.Workplane("XY").box(2, 3, 4).val().BoundingBox()
-
-    # Serialize to JSON
-    json_data = TypeAdapter(cq.BoundBox).dump_json(custom_box)
-
-    # Deserialize back to BoundBox
-    box_again = TypeAdapter(cq.BoundBox).validate_json(json_data)
-
-    # Compare the bounding boxes
-    # Check min/max coordinates
-    assert abs(custom_box.xmin - box_again.xmin) < 1e-10
-    assert abs(custom_box.xmax - box_again.xmax) < 1e-10
-    assert abs(custom_box.ymin - box_again.ymin) < 1e-10
-    assert abs(custom_box.ymax - box_again.ymax) < 1e-10
-    assert abs(custom_box.zmin - box_again.zmin) < 1e-10
-    assert abs(custom_box.zmax - box_again.zmax) < 1e-10
-
-    # Check derived properties
-    assert abs(custom_box.xlen - box_again.xlen) < 1e-10
-    assert abs(custom_box.ylen - box_again.ylen) < 1e-10
-    assert abs(custom_box.zlen - box_again.zlen) < 1e-10
-    assert abs(custom_box.DiagonalLength - box_again.DiagonalLength) < 1e-10
+    check_serialization(custom_box, cq.BoundBox, check_equality)
 
 
-def test_location_serialization():
-    patch_cadquery()
+def test_location_serialization(check_serialization):
+    def check_equality(l1: cq.Location, l2: cq.Location) -> bool:
+        # Get transformation components
+        orig_trans, orig_rot = l1.toTuple()
+        new_trans, new_rot = l2.toTuple()
 
-    # Create a test location (translation + rotation)
+        # Compare translation
+        assert abs(orig_trans[0] - new_trans[0]) < 1e-10
+        assert abs(orig_trans[1] - new_trans[1]) < 1e-10
+        assert abs(orig_trans[2] - new_trans[2]) < 1e-10
+
+        # Compare rotation (in radians)
+        assert abs(orig_rot[0] - new_rot[0]) < 1e-10
+        assert abs(orig_rot[1] - new_rot[1]) < 1e-10
+        assert abs(orig_rot[2] - new_rot[2]) < 1e-10
+        return True
+
+    # Test with translation + rotation
     location = cq.Location(x=1, y=2, z=3, rx=45, ry=0, rz=0)
-
-    # Serialize to JSON
-    json_data = TypeAdapter(cq.Location).dump_json(location)
-
-    # Deserialize back to Location
-    location_again = TypeAdapter(cq.Location).validate_json(json_data)
-
-    # Compare the locations
-    # Get transformation components
-    orig_trans, orig_rot = location.toTuple()
-    new_trans, new_rot = location_again.toTuple()
-
-    # Compare translation
-    assert abs(orig_trans[0] - new_trans[0]) < 1e-10
-    assert abs(orig_trans[1] - new_trans[1]) < 1e-10
-    assert abs(orig_trans[2] - new_trans[2]) < 1e-10
-
-    # Compare rotation (in radians)
-    assert abs(orig_rot[0] - new_rot[0]) < 1e-10
-    assert abs(orig_rot[1] - new_rot[1]) < 1e-10
-    assert abs(orig_rot[2] - new_rot[2]) < 1e-10
+    check_serialization(location, cq.Location, check_equality)
 
     # Test with a different location
     custom_location = cq.Location(x=2, y=3, z=4, rx=90, ry=0, rz=0)
-
-    # Serialize to JSON
-    json_data = TypeAdapter(cq.Location).dump_json(custom_location)
-
-    # Deserialize back to Location
-    location_again = TypeAdapter(cq.Location).validate_json(json_data)
-
-    # Compare the locations
-    # Get transformation components
-    orig_trans, orig_rot = custom_location.toTuple()
-    new_trans, new_rot = location_again.toTuple()
-
-    # Compare translation
-    assert abs(orig_trans[0] - new_trans[0]) < 1e-10
-    assert abs(orig_trans[1] - new_trans[1]) < 1e-10
-    assert abs(orig_trans[2] - new_trans[2]) < 1e-10
-
-    # Compare rotation (in radians)
-    assert abs(orig_rot[0] - new_rot[0]) < 1e-10
-    assert abs(orig_rot[1] - new_rot[1]) < 1e-10
-    assert abs(orig_rot[2] - new_rot[2]) < 1e-10
-
+    check_serialization(custom_location, cq.Location, check_equality)

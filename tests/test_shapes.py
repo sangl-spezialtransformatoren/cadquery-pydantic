@@ -1,41 +1,23 @@
 from cadquery_pydantic import patch_cadquery
-from pydantic import TypeAdapter
 import cadquery as cq
 
+patch_cadquery()
 
-def test_shape_serialization():
-    patch_cadquery()
 
-    # Create a test box
+def test_shape_serialization(check_serialization):
+    def check_equality(s1: cq.Shape, s2: cq.Shape) -> bool:
+        # Check label
+        assert s1.label == s2.label
+        # Check volume (as a proxy for shape equality)
+        assert abs(s1.Volume() - s2.Volume()) < 1e-10
+        return True
+
+    # Test with a box
     box = cq.Workplane("XY").box(1, 1, 1).val()
     box.label = "test_box"
+    check_serialization(box, cq.Shape, check_equality)
 
-    # Serialize to JSON
-    json_data = TypeAdapter(cq.Shape).dump_json(box)
-
-    # Deserialize back to Shape
-    box_again = TypeAdapter(cq.Shape).validate_json(json_data)
-
-    # Compare the shapes
-    # Check label
-    assert box.label == box_again.label
-
-    # Check volume (as a proxy for shape equality)
-    assert abs(box.Volume() - box_again.Volume()) < 1e-10
-
-    # Test with a different shape
+    # Test with a cylinder
     cylinder = cq.Workplane("XY").cylinder(1, 1).val()
     cylinder.label = "test_cylinder"
-
-    # Serialize to JSON
-    json_data = TypeAdapter(cq.Shape).dump_json(cylinder)
-
-    # Deserialize back to Shape
-    cylinder_again = TypeAdapter(cq.Shape).validate_json(json_data)
-
-    # Compare the shapes
-    # Check label
-    assert cylinder.label == cylinder_again.label
-
-    # Check volume (as a proxy for shape equality)
-    assert abs(cylinder.Volume() - cylinder_again.Volume()) < 1e-10
+    check_serialization(cylinder, cq.Shape, check_equality)

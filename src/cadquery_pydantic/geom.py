@@ -12,37 +12,36 @@ vector_schema = core_schema.typed_dict_schema(
     }
 )
 
+
 def validate_vector(value: dict) -> Vector:
     required_keys = {"x", "y", "z"}
     if not all(key in value for key in required_keys):
         raise ValueError("Vector must contain x, y, z coordinates")
     return Vector(value["x"], value["y"], value["z"])
 
+
 def serialize_vector(vector: Vector) -> dict:
     return {"x": vector.x, "y": vector.y, "z": vector.z}
 
+
+vector_from_json_schema = core_schema.chain_schema(
+    [
+        vector_schema,
+        core_schema.no_info_plain_validator_function(validate_vector),
+    ]
+)
+
 vector_core_schema = core_schema.json_or_python_schema(
-    json_schema=core_schema.chain_schema(
-        [
-            vector_schema,
-            core_schema.no_info_after_validator_function(validate_vector, vector_schema),
-        ]
-    ),
+    json_schema=vector_from_json_schema,
     python_schema=core_schema.union_schema(
         [
             core_schema.is_instance_schema(Vector),
-            core_schema.chain_schema(
-                [
-                    vector_schema,
-                    core_schema.no_info_after_validator_function(validate_vector, vector_schema),
-                ]
-            ),
+            vector_from_json_schema,
         ]
     ),
     serialization=core_schema.plain_serializer_function_ser_schema(
         serialize_vector,
         return_schema=vector_schema,
-        when_used="json",
     ),
 )
 
@@ -53,6 +52,7 @@ matrix_schema = core_schema.list_schema(
     max_length=4,
 )
 
+
 def validate_matrix(value: list) -> Matrix:
     if not isinstance(value, list) or len(value) != 4:
         raise ValueError("Matrix must be a list of 4 rows")
@@ -61,34 +61,33 @@ def validate_matrix(value: list) -> Matrix:
             raise ValueError("Each row must be a list of 4 elements")
     return Matrix(value)
 
+
 def serialize_matrix(matrix: Matrix) -> list:
     data = matrix.transposed_list()
     return [data[0:4], data[4:8], data[8:12], data[12:16]]
 
+
+matrix_from_json_schema = core_schema.chain_schema(
+    [
+        matrix_schema,
+        core_schema.no_info_plain_validator_function(validate_matrix),
+    ]
+)
+
 matrix_core_schema = core_schema.json_or_python_schema(
-    json_schema=core_schema.chain_schema(
-        [
-            matrix_schema,
-            core_schema.no_info_after_validator_function(validate_matrix, matrix_schema),
-        ]
-    ),
+    json_schema=matrix_from_json_schema,
     python_schema=core_schema.union_schema(
         [
             core_schema.is_instance_schema(Matrix),
-            core_schema.chain_schema(
-                [
-                    matrix_schema,
-                    core_schema.no_info_after_validator_function(validate_matrix, matrix_schema),
-                ]
-            ),
+            matrix_from_json_schema,
         ]
     ),
     serialization=core_schema.plain_serializer_function_ser_schema(
         serialize_matrix,
         return_schema=matrix_schema,
-        when_used="json",
     ),
 )
+
 
 # Plane schema
 def validate_plane(value: dict) -> Plane:
@@ -97,6 +96,7 @@ def validate_plane(value: dict) -> Plane:
         raise ValueError("Plane must contain origin, xDir, and normal vectors")
     return Plane(value["origin"], value["xDir"], value["normal"])
 
+
 def serialize_plane(plane: Plane) -> dict:
     return {
         "origin": plane.origin,
@@ -104,7 +104,8 @@ def serialize_plane(plane: Plane) -> dict:
         "normal": plane.zDir,
     }
 
-plane_model_schema = core_schema.typed_dict_schema(
+
+plane_schema = core_schema.typed_dict_schema(
     {
         "origin": core_schema.model_field(vector_core_schema),
         "xDir": core_schema.model_field(vector_core_schema),
@@ -112,23 +113,24 @@ plane_model_schema = core_schema.typed_dict_schema(
     }
 )
 
+plane_from_json_schema = core_schema.chain_schema(
+    [
+        plane_schema,
+        core_schema.no_info_plain_validator_function(validate_plane),
+    ]
+)
+
 plane_core_schema = core_schema.json_or_python_schema(
-    json_schema=core_schema.no_info_after_validator_function(validate_plane, plane_model_schema),
+    json_schema=plane_from_json_schema,
     python_schema=core_schema.union_schema(
         [
             core_schema.is_instance_schema(Plane),
-            core_schema.chain_schema(
-                [
-                    plane_model_schema,
-                    core_schema.no_info_after_validator_function(validate_plane, plane_model_schema),
-                ]
-            ),
+            plane_from_json_schema,
         ]
     ),
     serialization=core_schema.plain_serializer_function_ser_schema(
         serialize_plane,
-        return_schema=plane_model_schema,
-        when_used="json",
+        return_schema=plane_schema,
     ),
 )
 
@@ -144,15 +146,17 @@ boundbox_schema = core_schema.typed_dict_schema(
     }
 )
 
+
 def validate_boundbox(value: dict) -> BoundBox:
     required_keys = {"xmin", "xmax", "ymin", "ymax", "zmin", "zmax"}
     if not all(key in value for key in required_keys):
         raise ValueError("BoundBox must contain xmin, xmax, ymin, ymax, zmin, zmax")
-    
+
     bb = Bnd_Box()
     bb.Add(gp_Pnt(value["xmin"], value["ymin"], value["zmin"]))
     bb.Add(gp_Pnt(value["xmax"], value["ymax"], value["zmax"]))
     return BoundBox(bb)
+
 
 def serialize_boundbox(boundbox: BoundBox) -> dict:
     return {
@@ -164,28 +168,25 @@ def serialize_boundbox(boundbox: BoundBox) -> dict:
         "zmax": boundbox.zmax,
     }
 
+
+boundbox_from_json_schema = core_schema.chain_schema(
+    [
+        boundbox_schema,
+        core_schema.no_info_plain_validator_function(validate_boundbox),
+    ]
+)
+
 boundbox_core_schema = core_schema.json_or_python_schema(
-    json_schema=core_schema.chain_schema(
-        [
-            boundbox_schema,
-            core_schema.no_info_after_validator_function(validate_boundbox, boundbox_schema),
-        ]
-    ),
+    json_schema=boundbox_from_json_schema,
     python_schema=core_schema.union_schema(
         [
             core_schema.is_instance_schema(BoundBox),
-            core_schema.chain_schema(
-                [
-                    boundbox_schema,
-                    core_schema.no_info_after_validator_function(validate_boundbox, boundbox_schema),
-                ]
-            ),
+            boundbox_from_json_schema,
         ]
     ),
     serialization=core_schema.plain_serializer_function_ser_schema(
         serialize_boundbox,
         return_schema=boundbox_schema,
-        when_used="json",
     ),
 )
 
@@ -201,6 +202,7 @@ location_schema = core_schema.typed_dict_schema(
     }
 )
 
+
 def validate_location(value: dict) -> Location:
     required_keys = {"x", "y", "z", "rx", "ry", "rz"}
     if not all(key in value for key in required_keys):
@@ -214,6 +216,7 @@ def validate_location(value: dict) -> Location:
         rz=value["rz"],
     )
 
+
 def serialize_location(location: Location) -> dict:
     trans, rot = location.toTuple()
     return {
@@ -225,27 +228,24 @@ def serialize_location(location: Location) -> dict:
         "rz": rot[2],
     }
 
+
+location_from_json_schema = core_schema.chain_schema(
+    [
+        location_schema,
+        core_schema.no_info_plain_validator_function(validate_location),
+    ]
+)
+
 location_core_schema = core_schema.json_or_python_schema(
-    json_schema=core_schema.chain_schema(
-        [
-            location_schema,
-            core_schema.no_info_after_validator_function(validate_location, location_schema),
-        ]
-    ),
+    json_schema=location_from_json_schema,
     python_schema=core_schema.union_schema(
         [
             core_schema.is_instance_schema(Location),
-            core_schema.chain_schema(
-                [
-                    location_schema,
-                    core_schema.no_info_after_validator_function(validate_location, location_schema),
-                ]
-            ),
+            location_from_json_schema,
         ]
     ),
     serialization=core_schema.plain_serializer_function_ser_schema(
         serialize_location,
         return_schema=location_schema,
-        when_used="json",
     ),
 )
