@@ -95,6 +95,41 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
+### Space-efficient Storage/Transmission
+
+For efficient storage and transmission of CadQuery objects, you can combine [msgpack](https://msgpack.org/) for binary serialization with [zstandard](https://github.com/indygreg/python-zstandard) for compression:
+
+```python
+import cadquery as cq
+from pydantic import TypeAdapter
+import msgpack
+import zstandard as zstd
+from cadquery_pydantic import patch_cadquery
+
+patch_cadquery()
+
+# Create a CadQuery object
+box = cq.Workplane("XY").box(1, 1, 1)
+
+# Serialize to msgpack
+adapter = TypeAdapter(cq.Workplane)
+msgpack_data = msgpack.packb(adapter.dump_python(box))
+
+# Compress with zstandard
+compressor = zstd.ZstdCompressor()
+compressed_data = compressor.compress(msgpack_data)
+
+# Store or transmit the compressed data
+# ...
+
+# Decompress and deserialize
+decompressor = zstd.ZstdDecompressor()
+decompressed_data = decompressor.decompress(compressed_data)
+loaded_box = adapter.validate_python(msgpack.unpackb(decompressed_data))
+```
+
+This approach is faster as direct compression with `zstd` as `msgpack` removes the JSON boilerplate.
+
 ## Implementation Details
 
 ### Supported Types
