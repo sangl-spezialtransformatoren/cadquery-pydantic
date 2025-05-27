@@ -3,6 +3,8 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+> **Warning**: The serialization format is not yet stable. Future versions will introduce breaking changes to the JSON structure. Do not rely on the current format for long-term storage.
+
 Monkey-patch for [CadQuery](https://github.com/CadQuery/cadquery) to add [Pydantic](https://docs.pydantic.dev/latest/) support.
 
 ### Overview
